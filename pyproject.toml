@@ -1,5 +1,5 @@
 [project]
-name = "ssms"
+name = "filtering"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -17,7 +17,7 @@ dependencies = [
 ]
 
 [project.scripts]
-ssms = "ssms:main"
+ssms = "filtering:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -30,4 +30,4 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/vglm"]
+packages = ["src/filtering"]
