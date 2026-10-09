@@ -2,7 +2,9 @@ import jax
 import jax.numpy as jnp
 
 
-def particle_smoother(transition, particles, log_weights, t, Q, key, *, n_trajectories=1):
+def particle_smoother(
+    transition, particles, log_weights, t, Q, key, *, n_trajectories=1
+):
     """
     Forward-filtering backward-sampling (FFBS) particle smoother.
 
@@ -43,10 +45,10 @@ def particle_smoother(transition, particles, log_weights, t, Q, key, *, n_trajec
 
     # --- Backward scan from t=T-2 down to t=0 ---
     rev_idx = jnp.arange(T - 2, -1, -1)  # [T-2, T-3, ..., 0]
-    particles_rev = particles[rev_idx]      # (T-1, N, D)
+    particles_rev = particles[rev_idx]  # (T-1, N, D)
     log_weights_rev = log_weights[rev_idx]  # (T-1, N)
-    t_rev = t[rev_idx]                      # (T-1,)
-    dt_rev = (t[1:] - t[:-1])[rev_idx]     # (T-1,)
+    t_rev = t[rev_idx]  # (T-1,)
+    dt_rev = (t[1:] - t[:-1])[rev_idx]  # (T-1,)
 
     def backward_step(carry, inputs):
         x_next, key = carry  # x_next: (n_trajectories, D)
@@ -59,7 +61,9 @@ def particle_smoother(transition, particles, log_weights, t, Q, key, *, n_trajec
 
         # Mahalanobis distance: diff[j, n, :] = x_next[j] - x_pred[n]
         diff = x_next[:, None, :] - x_pred[None, :, :]  # (n_trajectories, N, D)
-        log_trans = -0.5 * jnp.einsum("jnd,de,jne->jn", diff, Q_inv, diff)  # (n_traj, N)
+        log_trans = -0.5 * jnp.einsum(
+            "jnd,de,jne->jn", diff, Q_inv, diff
+        )  # (n_traj, N)
 
         # Backward weights = filtering weight * transition density
         log_bw = log_weights_t[None, :] + log_trans  # (n_trajectories, N)

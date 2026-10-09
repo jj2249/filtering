@@ -25,15 +25,15 @@ def kalman_filter(F, H, y, x0_mean, x0_cov, Q, R):
         log_marginal_likelihood: scalar
     """
     D = x0_mean.shape[0]
-    I = jnp.eye(D)
+    Iden = jnp.eye(D)
 
     def update(x_pred, P_pred, y_k):
-        S = H @ P_pred @ H.T + R                          # (O, O) innovation covariance
-        K = jnp.linalg.solve(S.T, (H @ P_pred).T).T      # (D, O) Kalman gain
-        innovation = y_k - H @ x_pred                     # (O,)
-        x_new = x_pred + K @ innovation                   # (D,)
-        ImKH = I - K @ H
-        P_new = ImKH @ P_pred @ ImKH.T + K @ R @ K.T     # (D, D) Joseph form
+        S = H @ P_pred @ H.T + R  # (O, O) innovation covariance
+        K = jnp.linalg.solve(S.T, (H @ P_pred).T).T  # (D, O) Kalman gain
+        innovation = y_k - H @ x_pred  # (O,)
+        x_new = x_pred + K @ innovation  # (D,)
+        ImKH = Iden - K @ H
+        P_new = ImKH @ P_pred @ ImKH.T + K @ R @ K.T  # (D, D) Joseph form
         log_lik = multivariate_normal.logpdf(y_k, H @ x_pred, S)
         return x_new, P_new, log_lik
 
@@ -108,7 +108,7 @@ def unscented_kalman_filter(
 
     def sigma_points(x, P):
         """Generate 2D+1 sigma points from mean x and covariance P."""
-        L = jnp.linalg.cholesky(c * P)       # (D, D) lower triangular
+        L = jnp.linalg.cholesky(c * P)  # (D, D) lower triangular
         return jnp.concatenate([x[None, :], x + L.T, x - L.T], axis=0)  # (2D+1, D)
 
     def predict(x, P, t_start, dt_obs):
@@ -118,10 +118,10 @@ def unscented_kalman_filter(
 
         def substep(carry, t_k):
             x, P = carry
-            sp = sigma_points(x, P)                           # (2D+1, D)
-            sp_prop = transition(sp, t_k, dt_sub)             # (2D+1, D)
-            x_pred = W_m @ sp_prop                            # (D,)
-            diff = sp_prop - x_pred                           # (2D+1, D)
+            sp = sigma_points(x, P)  # (2D+1, D)
+            sp_prop = transition(sp, t_k, dt_sub)  # (2D+1, D)
+            x_pred = W_m @ sp_prop  # (D,)
+            diff = sp_prop - x_pred  # (2D+1, D)
             P_pred = jnp.einsum("n,nd,ne->de", W_c, diff, diff) + Q  # (D, D)
             return (x_pred, P_pred), None
 
@@ -129,20 +129,20 @@ def unscented_kalman_filter(
         return x_pred, P_pred
 
     def update(x_pred, P_pred, y_k):
-        sp = sigma_points(x_pred, P_pred)                     # (2D+1, D)
-        y_sp = observation(sp)                                 # (2D+1, O)
-        y_pred = W_m @ y_sp                                   # (O,)
+        sp = sigma_points(x_pred, P_pred)  # (2D+1, D)
+        y_sp = observation(sp)  # (2D+1, O)
+        y_pred = W_m @ y_sp  # (O,)
 
-        diff_x = sp - x_pred                                  # (2D+1, D)
-        diff_y = y_sp - y_pred                                # (2D+1, O)
+        diff_x = sp - x_pred  # (2D+1, D)
+        diff_y = y_sp - y_pred  # (2D+1, O)
 
         S = jnp.einsum("n,no,np->op", W_c, diff_y, diff_y) + R  # (O, O)
-        P_xy = jnp.einsum("n,nd,no->do", W_c, diff_x, diff_y)   # (D, O)
+        P_xy = jnp.einsum("n,nd,no->do", W_c, diff_x, diff_y)  # (D, O)
 
-        K = jnp.linalg.solve(S.T, P_xy.T).T                  # (D, O)
-        innovation = y_k - y_pred                             # (O,)
-        x_new = x_pred + K @ innovation                       # (D,)
-        P_new = P_pred - K @ S @ K.T                          # (D, D)
+        K = jnp.linalg.solve(S.T, P_xy.T).T  # (D, O)
+        innovation = y_k - y_pred  # (O,)
+        x_new = x_pred + K @ innovation  # (D,)
+        P_new = P_pred - K @ S @ K.T  # (D, D)
         log_lik = multivariate_normal.logpdf(y_k, y_pred, S)
         return x_new, P_new, log_lik
 

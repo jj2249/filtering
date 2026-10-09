@@ -223,22 +223,22 @@ def auxiliary_particle_filter(
         key, key_aux, key_prop, key_res = jax.random.split(key, 4)
 
         # --- First stage: auxiliary resampling ---
-        mu = pilot_predict(p, t_k, dt)          # (N, D) deterministic predictions
-        log_g = log_likelihood(y_next, mu)       # (N,) pilot log-likelihoods
+        mu = pilot_predict(p, t_k, dt)  # (N, D) deterministic predictions
+        log_g = log_likelihood(y_next, mu)  # (N,) pilot log-likelihoods
 
         lw_aux_unnorm = lw + log_g
         log_Z_aux = logsumexp(lw_aux_unnorm)
-        lw_aux = lw_aux_unnorm - log_Z_aux       # normalized auxiliary weights
+        lw_aux = lw_aux_unnorm - log_Z_aux  # normalized auxiliary weights
 
         p_resampled, ancestor_idx = systematic_resample(p, lw_aux, key_aux)
-        log_g_ancestors = log_g[ancestor_idx]    # pilot likelihoods for chosen ancestors
+        log_g_ancestors = log_g[ancestor_idx]  # pilot likelihoods for chosen ancestors
 
         # --- Propagate with noise ---
         p_prop = propagate(p_resampled, t_k, dt, key_prop)
 
         # --- Second stage: correction weights ---
-        log_p_prop = log_likelihood(y_next, p_prop)              # (N,)
-        lw_corr_unnorm = log_p_prop - log_g_ancestors            # (N,)
+        log_p_prop = log_likelihood(y_next, p_prop)  # (N,)
+        lw_corr_unnorm = log_p_prop - log_g_ancestors  # (N,)
         log_Z_corr = logsumexp(lw_corr_unnorm) - jnp.log(n_particles)
         lw = lw_corr_unnorm - logsumexp(lw_corr_unnorm)
 
@@ -247,7 +247,10 @@ def auxiliary_particle_filter(
 
         # Optional second-stage resampling if correction weights are uneven
         p, lw = jax.lax.cond(
-            ess < ess_threshold_abs, resample_uniform, skip_resample, (p_prop, lw, key_res)
+            ess < ess_threshold_abs,
+            resample_uniform,
+            skip_resample,
+            (p_prop, lw, key_res),
         )
 
         return (p, lw, key), (p, lw, ess, log_Z)
